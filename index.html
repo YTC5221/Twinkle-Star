@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Twinkle Star 花朵統計</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#f8f5fc;color:#2d2d2d;min-height:100vh}
+.page{max-width:1400px;margin:0 auto;padding:1.5rem 1rem}
+h1{font-size:24px;font-weight:600;text-align:center;color:#5b3d8a;margin-bottom:0.2rem;letter-spacing:1px}
+.subtitle{font-size:13px;color:#999;text-align:center;margin-bottom:1.5rem}
+.section{background:#fff;border:1px solid #e8e0f4;border-radius:14px;padding:1.4rem;margin-bottom:1.2rem;box-shadow:0 2px 8px rgba(91,61,138,0.06)}
+.section-title{font-size:16px;font-weight:600;color:#5b3d8a;margin-bottom:1rem;padding-bottom:0.6rem;border-bottom:1px solid #ede8f7;display:flex;align-items:center;gap:8px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:640px){.two-col{grid-template-columns:1fr}}
+.panel{background:#faf7ff;border:1px solid #e4ddf5;border-radius:10px;padding:1rem}
+.panel-title{font-size:14px;font-weight:600;color:#6d4daa;margin-bottom:0.8rem}
+.field{margin-bottom:0.6rem}
+.field label{font-size:12px;color:#888;display:block;margin-bottom:3px;font-weight:500}
+.field input,.field select{width:100%;font-size:13px;padding:7px 10px;border:1px solid #d4c9ee;border-radius:7px;background:#fff;color:#2d2d2d;outline:none;transition:border 0.15s}
+.field input:focus,.field select:focus{border-color:#9a6dd7}
+.btn{display:inline-flex;align-items:center;gap:5px;font-size:13px;padding:7px 16px;border-radius:7px;border:none;cursor:pointer;font-weight:500;transition:all 0.15s}
+.btn-primary{background:linear-gradient(135deg,#9a6dd7,#7b4fbf);color:#fff}
+.btn-primary:hover{opacity:0.88;transform:translateY(-1px)}
+.btn-danger{background:#fde8e8;color:#c0392b;border:1px solid #f5c0c0}
+.btn-danger:hover{background:#fbd5d5}
+.msg{font-size:12px;margin-top:6px;min-height:18px;color:#2ecc71;font-weight:500}
+.msg.err{color:#e74c3c}
+.grade-block{margin-bottom:1rem}
+.grade-header{display:flex;align-items:center;gap:8px;margin-bottom:0.5rem}
+.grade-toggle{font-size:13px;padding:6px 14px;border:1px solid #d4c9ee;border-radius:20px;background:#fff;color:#5b3d8a;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s;font-weight:500}
+.grade-toggle:hover{background:#f0eaff}
+.grade-toggle.open{background:#9a6dd7;color:#fff;border-color:#9a6dd7}
+.badge{font-size:11px;padding:2px 9px;border-radius:20px;font-weight:600}
+.g0{background:#FDECEA;color:#B71C1C}
+.g1{background:#FFF3E0;color:#E65100}
+.g2{background:#EDE7F6;color:#4527A0}
+.g3{background:#F3E5F5;color:#6A1B9A}
+.table-wrap{display:none;overflow-x:auto;border-radius:8px;border:1px solid #e4ddf5}
+.table-wrap.open{display:block}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{border:1px solid #ede8f7;padding:5px 8px;text-align:center;white-space:nowrap}
+th{background:#f5f0ff;font-weight:600;color:#6d4daa;position:sticky;top:0}
+th.flower-col{background:#f5f0ff;position:sticky;left:0;z-index:2}
+td.flower-name{background:#faf7ff;font-weight:500;text-align:left;position:sticky;left:0}
+td.total-row{background:#f0e9ff;font-weight:600;color:#5b3d8a}
+td.total-col{background:#f0e9ff;font-weight:600;color:#5b3d8a}
+td.grand{background:#e4d5ff;font-weight:700;color:#4a2d8a}
+td.has-flower{background:#d4edda;color:#1e6b3b;font-weight:600}
+.total-section{margin-top:1.2rem;padding-top:1rem;border-top:1px solid #ede8f7}
+.total-title{font-size:14px;font-weight:600;color:#6d4daa;margin-bottom:0.6rem;display:flex;align-items:center;gap:6px}
+.member-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:0.5rem}
+.chip{font-size:12px;padding:3px 12px;border:1px solid #d4c9ee;border-radius:20px;background:#faf7ff;color:#5b3d8a;font-weight:500}
+.sync-bar{display:flex;align-items:center;gap:8px;font-size:12px;color:#888;margin-bottom:1rem;padding:8px 12px;background:#f8f5fc;border-radius:8px;border:1px solid #e8e0f4}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#2ecc71;flex-shrink:0}
+.sync-dot.loading{background:#f39c12;animation:pulse 1s infinite}
+.sync-dot.error{background:#e74c3c}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.divider{border-top:1px solid #ede8f7;margin:0.8rem 0;padding-top:0.8rem}
+
+/* 設定頁 */
+.setup-overlay{position:fixed;inset:0;background:rgba(91,61,138,0.18);display:flex;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(2px)}
+.setup-box{background:#fff;border:1px solid #e4ddf5;border-radius:16px;padding:2rem;max-width:480px;width:92%;box-shadow:0 8px 32px rgba(91,61,138,0.15)}
+.setup-box h2{font-size:18px;font-weight:700;color:#5b3d8a;margin-bottom:0.4rem}
+.setup-box p{font-size:13px;color:#666;margin-bottom:1.2rem;line-height:1.6}
+.setup-box ol{font-size:13px;color:#555;line-height:2;margin-bottom:1.2rem;padding-left:1.2rem}
+.setup-box ol li{margin-bottom:0.2rem}
+.setup-box .url-field{display:flex;gap:8px;align-items:flex-end}
+.setup-box .url-field input{flex:1;font-size:13px;padding:8px 10px;border:1px solid #d4c9ee;border-radius:7px;outline:none}
+.setup-box .url-field input:focus{border-color:#9a6dd7}
+.url-hint{font-size:11px;color:#aaa;margin-top:4px}
+</style>
+</head>
+<body>
+
+<!-- 設定視窗（首次使用） -->
+<div class="setup-overlay" id="setupOverlay">
+  <div class="setup-box">
+    <h2>🌸 初次設定</h2>
+    <p>此系統需連接 Google Apps Script 以實現多人即時共用。請依照以下步驟完成設定：</p>
+    <ol>
+      <li>開啟 <a href="https://script.google.com" target="_blank" style="color:#7b4fbf">script.google.com</a>，建立新專案</li>
+      <li>將 <strong>Code.gs</strong> 的程式碼貼入編輯器</li>
+      <li>點選上方選單「部署」→「新增部署作業」</li>
+      <li>類型選「<strong>網頁應用程式</strong>」，存取權設為「<strong>所有人</strong>」</li>
+      <li>部署後複製「<strong>網頁應用程式 URL</strong>」</li>
+      <li>將 URL 貼入下方後儲存</li>
+    </ol>
+    <div class="url-field">
+      <input id="gasUrlInput" type="url" placeholder="貼上 Apps Script 網頁應用程式 URL..." />
+      <button class="btn btn-primary" onclick="saveGasUrl()">儲存並連線</button>
+    </div>
+    <div class="url-hint">URL 格式應為 https://script.google.com/macros/s/...../exec</div>
+    <div class="msg" id="setup_msg" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<div class="page">
+  <h1>🌸 Twinkle Star 花朵統計</h1>
+  <p class="subtitle">成員花朵數量管理系統 — 多人共用版</p>
+
+  <div class="sync-bar">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="syncStatus">連線中...</span>
+    <span style="margin-left:auto;font-size:11px;color:#bbb" id="lastSync"></span>
+    <button class="btn" style="margin-left:8px;font-size:11px;padding:4px 10px;color:#9a6dd7;border-color:#d4c9ee" onclick="showSetup()">⚙ 設定</button>
+  </div>
+
+  <!-- 建立新資料 -->
+  <div class="section">
+    <div class="section-title">✏️ 建立新資料</div>
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-title">➕ 新增擁有花朵</div>
+        <div class="field"><label>成員名字</label><input id="af_member" placeholder="輸入成員名字" list="memberList"></div>
+        <datalist id="memberList"></datalist>
+        <div class="field"><label>花朵名字</label><input id="af_flower" placeholder="輸入花朵名字" list="flowerList"></div>
+        <datalist id="flowerList"></datalist>
+        <button class="btn btn-primary" onclick="addFlowerRecord()">＋ 新增</button>
+        <div class="msg" id="msg_af"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">⚙️ 新增成員 / 花朵</div>
+        <div style="margin-bottom:0.8rem">
+          <div style="font-size:13px;font-weight:600;color:#6d4daa;margin-bottom:0.5rem">新增成員</div>
+          <div class="field"><label>成員名字</label><input id="nm_name" placeholder="輸入成員名字"></div>
+          <button class="btn btn-primary" onclick="addMember()">＋ 新增成員</button>
+          <div class="msg" id="msg_nm"></div>
+        </div>
+        <div class="divider">
+          <div style="font-size:13px;font-weight:600;color:#6d4daa;margin-bottom:0.5rem">新增花朵</div>
+          <div class="field"><label>花朵名稱</label><input id="nf_name" placeholder="輸入花朵名稱"></div>
+          <div class="field"><label>花朵等級</label>
+            <select id="nf_grade">
+              <option value="0">紅(閃)</option>
+              <option value="1">橙(星)</option>
+              <option value="2">紫(稀)氪</option>
+              <option value="3">紫(稀)</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="addFlowerType()">＋ 新增花朵</button>
+          <div class="msg" id="msg_nf"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 花朵數量統計 -->
+  <div class="section">
+    <div class="section-title">📊 花朵數量統計</div>
+    <div id="gradeTables"></div>
+    <div class="total-section">
+      <div class="total-title">🏆 總數量統計</div>
+      <div style="overflow-x:auto;border-radius:8px;border:1px solid #e4ddf5"><table id="totalTable"></table></div>
+    </div>
+  </div>
+
+  <!-- 成員管理 -->
+  <div class="section">
+    <div class="section-title">👥 成員管理</div>
+    <div class="field" style="max-width:300px"><label>選擇要刪除的成員</label>
+      <select id="del_select"><option value="">— 請選擇 —</option></select>
+    </div>
+    <button class="btn btn-danger" onclick="deleteMember()" style="margin-top:0.5rem">🗑 刪除成員</button>
+    <div class="msg err" id="msg_del"></div>
+    <div style="margin-top:0.8rem">
+      <div style="font-size:12px;color:#aaa;margin-bottom:0.5rem">目前成員（<span id="memberCount">0</span> 人）：</div>
+      <div class="member-chips" id="memberChips"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ CONFIG ============
+const STORAGE_KEY = 'twinkle_star_gas_url';
+const GRADES = ['紅(閃)','橙(星)','紫(稀)氪','紫(稀)'];
+const BADGE = ['g0','g1','g2','g3'];
+
+// ============ INITIAL DATA ============
+const EXCEL_DATA = {"members":["無鹽薯條","花恬染","莎莎","梓馨","怷o葆寶","暖暖","凌心","喵咪呼嚕嚕","儀璐","花開千年","一簾幽夢葵","鴨霸成","心有靈晞","瞳","迷糊的兔子","嫣嫣","小冉煙","桃桃","小風","魔法兜瑞咪","貓咪喵喵","藍可可","在逃仙女曾仙","已黑化的以羽","汝汝","沉穩的雨藍","盼梨子","ZOEY","芙妮","丹楓","Lumi","布丁"],"flowers":[["童話奇緣","冰雪幽蘭","珠光雙雀","蝶戀貓","朱閣狐影","桃映金簷","琉璃之心","獅舞慶典","傘下花眠"],["星落夢海","星光搖曳","蝶舞幽谷","花音映紅","月裳玉影","金闕國色","千層金","桃溪搖夢","雲間祈願","掌心祝福","綺羅鳶舞","蔚藍鳶夢","風中低語","暮歌花豌","海風花豌","流丹花豌","紫暮鳶影","絳紫浮光","赤晶浮光","紫夜彼岸","赤色彼岸","初蓮夢塘","朱華鶴立","緋雲雪櫻"],["七彩向陽花","銀葉地膚","旱雪蓮","綺光玫瑰","喵不可言","幽蘭蝶夢","雲絮珠搖","霧淞","風蠟花","美人櫻","翠珠花","錦簇荊影","蘆葦微微","紫色曼陀羅","橙色曼陀羅","黃色合歡花","綠色乒乓菊","黃色乒乓菊","淺紫長春花","紫立金花","紫大星芹","橙星君子蘭","紫色風信子","粉山茶","金黃梔子花","白色梔子花","橙色龍船花","紅色龍船花","粉色松蟲草","紫色松蟲草","紫仙客來","紫杜鵑","粉貓爪花","橙錦葵","玫紅牡丹","淡色牡丹","綠棉花","粉棉花","紫色滿天星","粉色滿天星","無盡夏白","無盡夏藍","龍吐珠粉","龍吐珠白","白色新娘花","黃雞冠花","橙雞冠花","紅雞冠花","瓜葉菊","葡萄風信子"],["棉花熊熊","洋甘菊","月見草","斑馬報春紫","白曼珠沙華","淡粉非洲菫","紫色非洲菫","淡藍三角梅","石榴花","黃花君子蘭","白花君子蘭","白色曼陀羅","紅嘉蘭","粉嘉蘭","粉馬纓丹","紫馬纓丹","紅馬纓丹","粉大星芹","白大星芹","黃薔薇","白薔薇","紫掌","紅掌","綠掌","粉木棉","藍洋桔梗","藍色風信子","粉色風信子","白山茶","黃色龍船花","紫荷花","白荷花","紅仙客來","粉仙客來","粉杜鵑","橘貓爪花","紫貓爪花","藍錦葵","粉錦葵","白棉花","黃色非洲菫","荼靡花","紫色繡線菊","白色繡線菊","星雲絮語","無盡夏粉"]],"records":[[{"member":"無鹽薯條","flower":"童話奇緣","count":1},{"member":"莎莎","flower":"童話奇緣","count":1},{"member":"梓馨","flower":"童話奇緣","count":1},{"member":"暖暖","flower":"童話奇緣","count":1},{"member":"喵咪呼嚕嚕","flower":"童話奇緣","count":1},{"member":"無鹽薯條","flower":"冰雪幽蘭","count":1},{"member":"莎莎","flower":"冰雪幽蘭","count":1},{"member":"梓馨","flower":"冰雪幽蘭","count":1},{"member":"暖暖","flower":"冰雪幽蘭","count":1},{"member":"喵咪呼嚕嚕","flower":"冰雪幽蘭","count":1},{"member":"魔法兜瑞咪","flower":"冰雪幽蘭","count":1},{"member":"藍可可","flower":"冰雪幽蘭","count":1},{"member":"暖暖","flower":"桃映金簷","count":1},{"member":"莎莎","flower":"琉璃之心","count":1},{"member":"暖暖","flower":"琉璃之心","count":1},{"member":"魔法兜瑞咪","flower":"琉璃之心","count":1},{"member":"喵咪呼嚕嚕","flower":"獅舞慶典","count":1},{"member":"無鹽薯條","flower":"傘下花眠","count":1},{"member":"莎莎","flower":"傘下花眠","count":1},{"member":"梓馨","flower":"傘下花眠","count":1},{"member":"暖暖","flower":"傘下花眠","count":1},{"member":"凌心","flower":"傘下花眠","count":1},{"member":"喵咪呼嚕嚕","flower":"傘下花眠","count":1},{"member":"魔法兜瑞咪","flower":"傘下花眠","count":1},{"member":"藍可可","flower":"傘下花眠","count":1}],[{"member":"暖暖","flower":"星光搖曳","count":1},{"member":"魔法兜瑞咪","flower":"花音映紅","count":1},{"member":"莎莎","flower":"月裳玉影","count":1},{"member":"無鹽薯條","flower":"金闕國色","count":1},{"member":"莎莎","flower":"金闕國色","count":1},{"member":"梓馨","flower":"金闕國色","count":1},{"member":"暖暖","flower":"金闕國色","count":1},{"member":"魔法兜瑞咪","flower":"金闕國色","count":1},{"member":"藍可可","flower":"金闕國色","count":1},{"member":"無鹽薯條","flower":"千層金","count":1},{"member":"梓馨","flower":"千層金","count":1},{"member":"怷o葆寶","flower":"千層金","count":1},{"member":"鴨霸成","flower":"千層金","count":1},{"member":"布丁","flower":"千層金","count":1},{"member":"無鹽薯條","flower":"桃溪搖夢","count":1},{"member":"莎莎","flower":"桃溪搖夢","count":1},{"member":"梓馨","flower":"桃溪搖夢","count":1},{"member":"暖暖","flower":"桃溪搖夢","count":1},{"member":"凌心","flower":"桃溪搖夢","count":1},{"member":"儀璐","flower":"桃溪搖夢","count":1},{"member":"瞳","flower":"桃溪搖夢","count":1},{"member":"桃桃","flower":"桃溪搖夢","count":1},{"member":"魔法兜瑞咪","flower":"桃溪搖夢","count":1},{"member":"汝汝","flower":"桃溪搖夢","count":1},{"member":"莎莎","flower":"雲間祈願","count":1},{"member":"莎莎","flower":"掌心祝福","count":1},{"member":"莎莎","flower":"綺羅鳶舞","count":1},{"member":"暖暖","flower":"蔚藍鳶夢","count":1},{"member":"暖暖","flower":"風中低語","count":1},{"member":"暖暖","flower":"暮歌花豌","count":1},{"member":"暖暖","flower":"海風花豌","count":1},{"member":"莎莎","flower":"流丹花豌","count":1},{"member":"莎莎","flower":"紫暮鳶影","count":1},{"member":"無鹽薯條","flower":"絳紫浮光","count":1},{"member":"莎莎","flower":"絳紫浮光","count":1},{"member":"暖暖","flower":"絳紫浮光","count":1},{"member":"魔法兜瑞咪","flower":"絳紫浮光","count":1},{"member":"藍可可","flower":"絳紫浮光","count":1},{"member":"莎莎","flower":"赤晶浮光","count":1},{"member":"梓馨","flower":"赤晶浮光","count":1},{"member":"暖暖","flower":"赤晶浮光","count":1},{"member":"魔法兜瑞咪","flower":"赤晶浮光","count":1},{"member":"暖暖","flower":"紫夜彼岸","count":1},{"member":"魔法兜瑞咪","flower":"紫夜彼岸","count":1},{"member":"暖暖","flower":"赤色彼岸","count":1},{"member":"莎莎","flower":"初蓮夢塘","count":1},{"member":"暖暖","flower":"初蓮夢塘","count":1},{"member":"魔法兜瑞咪","flower":"初蓮夢塘","count":1},{"member":"莎莎","flower":"朱華鶴立","count":1},{"member":"暖暖","flower":"朱華鶴立","count":1},{"member":"莎莎","flower":"緋雲雪櫻","count":1},{"member":"暖暖","flower":"緋雲雪櫻","count":1}],[{"member":"無鹽薯條","flower":"七彩向陽花","count":1},{"member":"莎莎","flower":"七彩向陽花","count":1},{"member":"梓馨","flower":"七彩向陽花","count":1},{"member":"怷o葆寶","flower":"七彩向陽花","count":1},{"member":"暖暖","flower":"七彩向陽花","count":1},{"member":"凌心","flower":"七彩向陽花","count":1},{"member":"喵咪呼嚕嚕","flower":"七彩向陽花","count":1},{"member":"儀璐","flower":"七彩向陽花","count":1},{"member":"花開千年","flower":"七彩向陽花","count":1},{"member":"一簾幽夢葵","flower":"七彩向陽花","count":1},{"member":"鴨霸成","flower":"七彩向陽花","count":1},{"member":"心有靈晞","flower":"七彩向陽花","count":1},{"member":"嫣嫣","flower":"七彩向陽花","count":1},{"member":"桃桃","flower":"七彩向陽花","count":1},{"member":"魔法兜瑞咪","flower":"七彩向陽花","count":1},{"member":"藍可可","flower":"七彩向陽花","count":1},{"member":"在逃仙女曾仙","flower":"七彩向陽花","count":1},{"member":"汝汝","flower":"七彩向陽花","count":1},{"member":"芙妮","flower":"七彩向陽花","count":1},{"member":"Lumi","flower":"七彩向陽花","count":1},{"member":"無鹽薯條","flower":"銀葉地膚","count":1},{"member":"莎莎","flower":"銀葉地膚","count":1},{"member":"梓馨","flower":"銀葉地膚","count":1},{"member":"暖暖","flower":"銀葉地膚","count":1},{"member":"喵咪呼嚕嚕","flower":"銀葉地膚","count":1},{"member":"一簾幽夢葵","flower":"銀葉地膚","count":1},{"member":"魔法兜瑞咪","flower":"銀葉地膚","count":1},{"member":"無鹽薯條","flower":"旱雪蓮","count":1},{"member":"莎莎","flower":"旱雪蓮","count":1},{"member":"梓馨","flower":"旱雪蓮","count":1},{"member":"暖暖","flower":"旱雪蓮","count":1},{"member":"喵咪呼嚕嚕","flower":"旱雪蓮","count":1},{"member":"魔法兜瑞咪","flower":"旱雪蓮","count":1},{"member":"無鹽薯條","flower":"綺光玫瑰","count":1},{"member":"莎莎","flower":"綺光玫瑰","count":1},{"member":"梓馨","flower":"綺光玫瑰","count":1},{"member":"暖暖","flower":"綺光玫瑰","count":1},{"member":"喵咪呼嚕嚕","flower":"綺光玫瑰","count":1},{"member":"魔法兜瑞咪","flower":"綺光玫瑰","count":1},{"member":"莎莎","flower":"喵不可言","count":1},{"member":"梓馨","flower":"喵不可言","count":1},{"member":"暖暖","flower":"喵不可言","count":1},{"member":"喵咪呼嚕嚕","flower":"喵不可言","count":1},{"member":"魔法兜瑞咪","flower":"喵不可言","count":1},{"member":"莎莎","flower":"幽蘭蝶夢","count":1},{"member":"暖暖","flower":"幽蘭蝶夢","count":1},{"member":"喵咪呼嚕嚕","flower":"幽蘭蝶夢","count":1},{"member":"無鹽薯條","flower":"霧淞","count":1},{"member":"莎莎","flower":"霧淞","count":1},{"member":"梓馨","flower":"霧淞","count":1},{"member":"暖暖","flower":"霧淞","count":1},{"member":"喵咪呼嚕嚕","flower":"霧淞","count":1},{"member":"魔法兜瑞咪","flower":"霧淞","count":1},{"member":"無鹽薯條","flower":"風蠟花","count":1},{"member":"莎莎","flower":"風蠟花","count":1},{"member":"梓馨","flower":"風蠟花","count":1},{"member":"暖暖","flower":"風蠟花","count":1},{"member":"喵咪呼嚕嚕","flower":"風蠟花","count":1},{"member":"魔法兜瑞咪","flower":"風蠟花","count":1},{"member":"無鹽薯條","flower":"美人櫻","count":1},{"member":"莎莎","flower":"美人櫻","count":1},{"member":"梓馨","flower":"美人櫻","count":1},{"member":"暖暖","flower":"美人櫻","count":1},{"member":"喵咪呼嚕嚕","flower":"美人櫻","count":1},{"member":"無鹽薯條","flower":"翠珠花","count":1},{"member":"莎莎","flower":"翠珠花","count":1},{"member":"梓馨","flower":"翠珠花","count":1},{"member":"暖暖","flower":"翠珠花","count":1},{"member":"喵咪呼嚕嚕","flower":"翠珠花","count":1},{"member":"魔法兜瑞咪","flower":"翠珠花","count":1},{"member":"無鹽薯條","flower":"錦簇荊影","count":1},{"member":"暖暖","flower":"錦簇荊影","count":1},{"member":"喵咪呼嚕嚕","flower":"錦簇荊影","count":1},{"member":"無鹽薯條","flower":"蘆葦微微","count":1},{"member":"莎莎","flower":"蘆葦微微","count":1},{"member":"梓馨","flower":"蘆葦微微","count":1},{"member":"暖暖","flower":"蘆葦微微","count":1},{"member":"凌心","flower":"蘆葦微微","count":1},{"member":"喵咪呼嚕嚕","flower":"蘆葦微微","count":1},{"member":"儀璐","flower":"蘆葦微微","count":1},{"member":"魔法兜瑞咪","flower":"蘆葦微微","count":1},{"member":"布丁","flower":"蘆葦微微","count":1},{"member":"莎莎","flower":"紫色曼陀羅","count":1},{"member":"莎莎","flower":"橙色曼陀羅","count":1},{"member":"莎莎","flower":"黃色合歡花","count":1},{"member":"莎莎","flower":"綠色乒乓菊","count":1},{"member":"莎莎","flower":"黃色乒乓菊","count":1},{"member":"暖暖","flower":"淺紫長春花","count":1},{"member":"暖暖","flower":"紫立金花","count":1},{"member":"暖暖","flower":"紫大星芹","count":1},{"member":"暖暖","flower":"橙星君子蘭","count":1},{"member":"暖暖","flower":"紫色風信子","count":1},{"member":"暖暖","flower":"粉山茶","count":1},{"member":"暖暖","flower":"金黃梔子花","count":1},{"member":"暖暖","flower":"白色梔子花","count":1},{"member":"暖暖","flower":"橙色龍船花","count":1},{"member":"暖暖","flower":"紅色龍船花","count":1},{"member":"暖暖","flower":"粉色松蟲草","count":1},{"member":"暖暖","flower":"紫色松蟲草","count":1},{"member":"莎莎","flower":"紫仙客來","count":1},{"member":"莎莎","flower":"紫杜鵑","count":1},{"member":"莎莎","flower":"粉貓爪花","count":1},{"member":"莎莎","flower":"橙錦葵","count":1},{"member":"莎莎","flower":"玫紅牡丹","count":1},{"member":"莎莎","flower":"淡色牡丹","count":1},{"member":"暖暖","flower":"綠棉花","count":1},{"member":"暖暖","flower":"粉棉花","count":1},{"member":"魔法兜瑞咪","flower":"粉棉花","count":1},{"member":"梓馨","flower":"紫色滿天星","count":1},{"member":"暖暖","flower":"紫色滿天星","count":1},{"member":"魔法兜瑞咪","flower":"紫色滿天星","count":1},{"member":"暖暖","flower":"粉色滿天星","count":1},{"member":"魔法兜瑞咪","flower":"粉色滿天星","count":1},{"member":"梓馨","flower":"無盡夏白","count":1},{"member":"暖暖","flower":"無盡夏白","count":1},{"member":"喵咪呼嚕嚕","flower":"無盡夏白","count":1},{"member":"暖暖","flower":"無盡夏藍","count":1},{"member":"魔法兜瑞咪","flower":"無盡夏藍","count":1},{"member":"暖暖","flower":"龍吐珠粉","count":1},{"member":"喵咪呼嚕嚕","flower":"龍吐珠粉","count":1},{"member":"魔法兜瑞咪","flower":"龍吐珠粉","count":1},{"member":"暖暖","flower":"龍吐珠白","count":1},{"member":"一簾幽夢葵","flower":"龍吐珠白","count":1},{"member":"魔法兜瑞咪","flower":"龍吐珠白","count":1},{"member":"無鹽薯條","flower":"白色新娘花","count":1},{"member":"暖暖","flower":"白色新娘花","count":1},{"member":"一簾幽夢葵","flower":"白色新娘花","count":1},{"member":"魔法兜瑞咪","flower":"白色新娘花","count":1},{"member":"暖暖","flower":"黃雞冠花","count":1},{"member":"一簾幽夢葵","flower":"黃雞冠花","count":1},{"member":"魔法兜瑞咪","flower":"黃雞冠花","count":1},{"member":"無鹽薯條","flower":"橙雞冠花","count":1},{"member":"暖暖","flower":"橙雞冠花","count":1},{"member":"魔法兜瑞咪","flower":"橙雞冠花","count":1},{"member":"暖暖","flower":"紅雞冠花","count":1},{"member":"一簾幽夢葵","flower":"紅雞冠花","count":1},{"member":"莎莎","flower":"瓜葉菊","count":1},{"member":"暖暖","flower":"瓜葉菊","count":1},{"member":"喵咪呼嚕嚕","flower":"瓜葉菊","count":1},{"member":"一簾幽夢葵","flower":"瓜葉菊","count":1},{"member":"無鹽薯條","flower":"葡萄風信子","count":1},{"member":"莎莎","flower":"葡萄風信子","count":1},{"member":"暖暖","flower":"葡萄風信子","count":1},{"member":"喵咪呼嚕嚕","flower":"葡萄風信子","count":1},{"member":"魔法兜瑞咪","flower":"葡萄風信子","count":1}],[{"member":"無鹽薯條","flower":"棉花熊熊","count":1},{"member":"花恬染","flower":"棉花熊熊","count":1},{"member":"莎莎","flower":"棉花熊熊","count":1},{"member":"梓馨","flower":"棉花熊熊","count":1},{"member":"怷o葆寶","flower":"棉花熊熊","count":1},{"member":"暖暖","flower":"棉花熊熊","count":1},{"member":"凌心","flower":"棉花熊熊","count":1},{"member":"喵咪呼嚕嚕","flower":"棉花熊熊","count":1},{"member":"儀璐","flower":"棉花熊熊","count":1},{"member":"花開千年","flower":"棉花熊熊","count":1},{"member":"一簾幽夢葵","flower":"棉花熊熊","count":1},{"member":"鴨霸成","flower":"棉花熊熊","count":1},{"member":"心有靈晞","flower":"棉花熊熊","count":1},{"member":"瞳","flower":"棉花熊熊","count":1},{"member":"迷糊的兔子","flower":"棉花熊熊","count":1},{"member":"嫣嫣","flower":"棉花熊熊","count":1},{"member":"桃桃","flower":"棉花熊熊","count":1},{"member":"魔法兜瑞咪","flower":"棉花熊熊","count":1},{"member":"貓咪喵喵","flower":"棉花熊熊","count":1},{"member":"已黑化的以羽","flower":"棉花熊熊","count":1},{"member":"汝汝","flower":"棉花熊熊","count":1},{"member":"沉穩的雨藍","flower":"棉花熊熊","count":1},{"member":"盼梨子","flower":"棉花熊熊","count":1},{"member":"Lumi","flower":"棉花熊熊","count":1},{"member":"布丁","flower":"棉花熊熊","count":1},{"member":"無鹽薯條","flower":"洋甘菊","count":1},{"member":"花恬染","flower":"洋甘菊","count":1},{"member":"莎莎","flower":"洋甘菊","count":1},{"member":"梓馨","flower":"洋甘菊","count":1},{"member":"怷o葆寶","flower":"洋甘菊","count":1},{"member":"暖暖","flower":"洋甘菊","count":1},{"member":"凌心","flower":"洋甘菊","count":1},{"member":"喵咪呼嚕嚕","flower":"洋甘菊","count":1},{"member":"儀璐","flower":"洋甘菊","count":1},{"member":"花開千年","flower":"洋甘菊","count":1},{"member":"一簾幽夢葵","flower":"洋甘菊","count":1},{"member":"鴨霸成","flower":"洋甘菊","count":1},{"member":"心有靈晞","flower":"洋甘菊","count":1},{"member":"瞳","flower":"洋甘菊","count":1},{"member":"迷糊的兔子","flower":"洋甘菊","count":1},{"member":"嫣嫣","flower":"洋甘菊","count":1},{"member":"桃桃","flower":"洋甘菊","count":1},{"member":"魔法兜瑞咪","flower":"洋甘菊","count":1},{"member":"汝汝","flower":"洋甘菊","count":1},{"member":"沉穩的雨藍","flower":"洋甘菊","count":1},{"member":"丹楓","flower":"洋甘菊","count":1},{"member":"Lumi","flower":"洋甘菊","count":1},{"member":"布丁","flower":"洋甘菊","count":1},{"member":"無鹽薯條","flower":"月見草","count":1},{"member":"花恬染","flower":"月見草","count":1},{"member":"莎莎","flower":"月見草","count":1},{"member":"梓馨","flower":"月見草","count":1},{"member":"怷o葆寶","flower":"月見草","count":1},{"member":"暖暖","flower":"月見草","count":1},{"member":"凌心","flower":"月見草","count":1},{"member":"喵咪呼嚕嚕","flower":"月見草","count":1},{"member":"儀璐","flower":"月見草","count":1},{"member":"花開千年","flower":"月見草","count":1},{"member":"一簾幽夢葵","flower":"月見草","count":1},{"member":"鴨霸成","flower":"月見草","count":1},{"member":"心有靈晞","flower":"月見草","count":1},{"member":"迷糊的兔子","flower":"月見草","count":1},{"member":"嫣嫣","flower":"月見草","count":1},{"member":"桃桃","flower":"月見草","count":1},{"member":"魔法兜瑞咪","flower":"月見草","count":1},{"member":"汝汝","flower":"月見草","count":1},{"member":"沉穩的雨藍","flower":"月見草","count":1},{"member":"盼梨子","flower":"月見草","count":1},{"member":"芙妮","flower":"月見草","count":1},{"member":"Lumi","flower":"月見草","count":1},{"member":"布丁","flower":"月見草","count":1},{"member":"無鹽薯條","flower":"斑馬報春紫","count":1},{"member":"花恬染","flower":"斑馬報春紫","count":1},{"member":"莎莎","flower":"斑馬報春紫","count":1},{"member":"梓馨","flower":"斑馬報春紫","count":1},{"member":"怷o葆寶","flower":"斑馬報春紫","count":1},{"member":"暖暖","flower":"斑馬報春紫","count":1},{"member":"喵咪呼嚕嚕","flower":"斑馬報春紫","count":1},{"member":"儀璐","flower":"斑馬報春紫","count":1},{"member":"花開千年","flower":"斑馬報春紫","count":1},{"member":"一簾幽夢葵","flower":"斑馬報春紫","count":1},{"member":"鴨霸成","flower":"斑馬報春紫","count":1},{"member":"心有靈晞","flower":"斑馬報春紫","count":1},{"member":"瞳","flower":"斑馬報春紫","count":1},{"member":"迷糊的兔子","flower":"斑馬報春紫","count":1},{"member":"嫣嫣","flower":"斑馬報春紫","count":1},{"member":"魔法兜瑞咪","flower":"斑馬報春紫","count":1},{"member":"汝汝","flower":"斑馬報春紫","count":1},{"member":"沉穩的雨藍","flower":"斑馬報春紫","count":1},{"member":"盼梨子","flower":"斑馬報春紫","count":1},{"member":"丹楓","flower":"斑馬報春紫","count":1},{"member":"Lumi","flower":"斑馬報春紫","count":1},{"member":"布丁","flower":"斑馬報春紫","count":1},{"member":"莎莎","flower":"白曼珠沙華","count":1},{"member":"梓馨","flower":"白曼珠沙華","count":1},{"member":"怷o葆寶","flower":"白曼珠沙華","count":1},{"member":"暖暖","flower":"白曼珠沙華","count":1},{"member":"喵咪呼嚕嚕","flower":"白曼珠沙華","count":1},{"member":"儀璐","flower":"白曼珠沙華","count":1},{"member":"心有靈晞","flower":"白曼珠沙華","count":1},{"member":"魔法兜瑞咪","flower":"白曼珠沙華","count":1},{"member":"芙妮","flower":"白曼珠沙華","count":1},{"member":"丹楓","flower":"白曼珠沙華","count":1},{"member":"花恬染","flower":"淡粉非洲菫","count":1},{"member":"莎莎","flower":"淡粉非洲菫","count":1},{"member":"梓馨","flower":"淡粉非洲菫","count":1},{"member":"怷o葆寶","flower":"淡粉非洲菫","count":1},{"member":"暖暖","flower":"淡粉非洲菫","count":1},{"member":"喵咪呼嚕嚕","flower":"淡粉非洲菫","count":1},{"member":"心有靈晞","flower":"淡粉非洲菫","count":1},{"member":"魔法兜瑞咪","flower":"淡粉非洲菫","count":1},{"member":"汝汝","flower":"淡粉非洲菫","count":1},{"member":"丹楓","flower":"淡粉非洲菫","count":1},{"member":"無鹽薯條","flower":"紫色非洲菫","count":1},{"member":"莎莎","flower":"紫色非洲菫","count":1},{"member":"梓馨","flower":"紫色非洲菫","count":1},{"member":"暖暖","flower":"紫色非洲菫","count":1},{"member":"喵咪呼嚕嚕","flower":"紫色非洲菫","count":1},{"member":"儀璐","flower":"紫色非洲菫","count":1},{"member":"花開千年","flower":"紫色非洲菫","count":1},{"member":"魔法兜瑞咪","flower":"紫色非洲菫","count":1},{"member":"盼梨子","flower":"紫色非洲菫","count":1},{"member":"丹楓","flower":"紫色非洲菫","count":1},{"member":"無鹽薯條","flower":"淡藍三角梅","count":1},{"member":"花恬染","flower":"淡藍三角梅","count":1},{"member":"莎莎","flower":"淡藍三角梅","count":1},{"member":"梓馨","flower":"淡藍三角梅","count":1},{"member":"暖暖","flower":"淡藍三角梅","count":1},{"member":"喵咪呼嚕嚕","flower":"淡藍三角梅","count":1},{"member":"鴨霸成","flower":"淡藍三角梅","count":1},{"member":"嫣嫣","flower":"淡藍三角梅","count":1},{"member":"魔法兜瑞咪","flower":"淡藍三角梅","count":1},{"member":"汝汝","flower":"淡藍三角梅","count":1},{"member":"布丁","flower":"淡藍三角梅","count":1},{"member":"貓咪喵喵","flower":"紅馬纓丹","count":1},{"member":"凌心","flower":"粉大星芹","count":1},{"member":"暖暖","flower":"白大星芹","count":1},{"member":"桃桃","flower":"紅掌","count":1},{"member":"莎莎","flower":"綠掌","count":1},{"member":"無鹽薯條","flower":"粉木棉","count":1},{"member":"莎莎","flower":"粉木棉","count":1},{"member":"喵咪呼嚕嚕","flower":"粉木棉","count":1},{"member":"儀璐","flower":"粉木棉","count":1},{"member":"無鹽薯條","flower":"藍洋桔梗","count":1},{"member":"莎莎","flower":"藍色風信子","count":1},{"member":"凌心","flower":"藍色風信子","count":1},{"member":"魔法兜瑞咪","flower":"粉色風信子","count":1},{"member":"花恬染","flower":"白山茶","count":1},{"member":"莎莎","flower":"白山茶","count":1},{"member":"心有靈晞","flower":"白山茶","count":1},{"member":"梓馨","flower":"黃色龍船花","count":1},{"member":"梓馨","flower":"紫荷花","count":1},{"member":"嫣嫣","flower":"白荷花","count":1},{"member":"梓馨","flower":"紅仙客來","count":1},{"member":"梓馨","flower":"粉仙客來","count":1},{"member":"暖暖","flower":"粉仙客來","count":1},{"member":"花恬染","flower":"粉杜鵑","count":1},{"member":"梓馨","flower":"粉杜鵑","count":1},{"member":"儀璐","flower":"粉杜鵑","count":1},{"member":"瞳","flower":"橘貓爪花","count":1},{"member":"無鹽薯條","flower":"荼靡花","count":1},{"member":"暖暖","flower":"荼靡花","count":1},{"member":"汝汝","flower":"荼靡花","count":1},{"member":"無鹽薯條","flower":"紫色繡線菊","count":1},{"member":"花恬染","flower":"紫色繡線菊","count":1},{"member":"莎莎","flower":"紫色繡線菊","count":1},{"member":"梓馨","flower":"紫色繡線菊","count":1},{"member":"暖暖","flower":"紫色繡線菊","count":1},{"member":"凌心","flower":"紫色繡線菊","count":1},{"member":"無鹽薯條","flower":"白色繡線菊","count":1},{"member":"無鹽薯條","flower":"星雲絮語","count":1},{"member":"莎莎","flower":"星雲絮語","count":1},{"member":"凌心","flower":"星雲絮語","count":1},{"member":"喵咪呼嚕嚕","flower":"星雲絮語","count":1},{"member":"瞳","flower":"星雲絮語","count":1},{"member":"布丁","flower":"星雲絮語","count":1},{"member":"暖暖","flower":"無盡夏粉","count":1}]]};
+
+// ============ STATE ============
+let state = null;
+let openStates = [false,false,false,false];
+let saveTimer = null;
+let GAS_URL = '';
+
+// ============ SETUP ============
+function getStoredUrl(){
+  try { return localStorage.getItem(STORAGE_KEY) || ''; } catch(e){ return ''; }
+}
+function storeUrl(url){
+  try { localStorage.setItem(STORAGE_KEY, url); } catch(e){}
+}
+function showSetup(){
+  document.getElementById('gasUrlInput').value = GAS_URL;
+  document.getElementById('setupOverlay').style.display = 'flex';
+}
+function saveGasUrl(){
+  const url = document.getElementById('gasUrlInput').value.trim();
+  if(!url || !url.startsWith('https://script.google.com')){
+    showMsg('setup_msg','請輸入有效的 Apps Script URL',true);
+    return;
+  }
+  GAS_URL = url;
+  storeUrl(url);
+  document.getElementById('setupOverlay').style.display = 'none';
+  loadData();
+}
+
+// ============ API ============
+async function apiLoad(){
+  const url = GAS_URL + '?action=load';
+  const res = await fetch(url);
+  const json = await res.json();
+  if(!json.ok) throw new Error(json.error||'load failed');
+  return json.data;
+}
+
+async function apiSave(data){
+  const url = GAS_URL + '?action=save&data=' + encodeURIComponent(JSON.stringify(data));
+  const res = await fetch(url);
+  const json = await res.json();
+  if(!json.ok) throw new Error(json.error||'save failed');
+}
+
+// ============ STORAGE ============
+async function loadData(){
+  setSync('loading','載入資料中...');
+  try {
+    const data = await apiLoad();
+    if(data){
+      state = data;
+      setSync('ok','已連線 — 共用資料已載入');
+    } else {
+      state = JSON.parse(JSON.stringify(EXCEL_DATA));
+      await apiSave(state);
+      setSync('ok','已連線 — 使用初始資料');
+    }
+  } catch(e){
+    state = JSON.parse(JSON.stringify(EXCEL_DATA));
+    setSync('error','無法連線：' + e.message + '（請確認設定）');
+  }
+  render();
+}
+
+async function saveData(){
+  try {
+    await apiSave(state);
+    const now = new Date();
+    document.getElementById('lastSync').textContent = '最後更新：' + now.toLocaleTimeString('zh-TW');
+    setSync('ok','已連線 — 資料已同步');
+  } catch(e){
+    setSync('error','同步失敗：' + e.message);
+  }
+}
+
+function scheduleSave(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveData, 800);
+}
+
+function setSync(status, text){
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncStatus');
+  dot.className = 'sync-dot' + (status==='loading'?' loading': status==='error'?' error':'');
+  lbl.textContent = text;
+}
+
+// ============ ACTIONS ============
+function showMsg(id, text, isErr=false, ms=2500){
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'msg' + (isErr?' err':'');
+  setTimeout(()=>{ el.textContent=''; el.className='msg'; }, ms);
+}
+
+function addMember(){
+  const name = document.getElementById('nm_name').value.trim();
+  if(!name) return showMsg('msg_nm','請輸入成員名字',true);
+  if(state.members.includes(name)) return showMsg('msg_nm','成員已存在',true);
+  state.members.push(name);
+  document.getElementById('nm_name').value='';
+  render(); scheduleSave();
+  showMsg('msg_nm','✓ 成員「'+name+'」已新增');
+}
+
+function addFlowerType(){
+  const name = document.getElementById('nf_name').value.trim();
+  const g = parseInt(document.getElementById('nf_grade').value);
+  if(!name) return showMsg('msg_nf','請輸入花朵名稱',true);
+  if(state.flowers[g].includes(name)) return showMsg('msg_nf','該等級已有此花朵',true);
+  state.flowers[g].push(name);
+  document.getElementById('nf_name').value='';
+  render(); scheduleSave();
+  showMsg('msg_nf','✓ 花朵「'+name+'」已新增至 '+GRADES[g]);
+}
+
+function addFlowerRecord(){
+  const member = document.getElementById('af_member').value.trim();
+  const flower = document.getElementById('af_flower').value.trim();
+  if(!member||!flower) return showMsg('msg_af','請輸入成員和花朵名字',true);
+  if(!state.members.includes(member)) return showMsg('msg_af','成員「'+member+'」不存在，請先新增成員',true);
+  let found=false;
+  for(let g=0;g<4;g++){
+    if(state.flowers[g].includes(flower)){
+      let rec = state.records[g].find(r=>r.member===member && r.flower===flower);
+      if(!rec){ rec={member,flower,count:0}; state.records[g].push(rec); }
+      rec.count++;
+      found=true;
+      render(); scheduleSave();
+      showMsg('msg_af','✓ 已記錄 '+member+' 的「'+flower+'」（'+GRADES[g]+'）＋1');
+      break;
+    }
+  }
+  if(!found) showMsg('msg_af','花朵「'+flower+'」不存在，請先新增該花朵',true);
+}
+
+function deleteMember(){
+  const name = document.getElementById('del_select').value;
+  if(!name) return showMsg('msg_del','請選擇要刪除的成員',true);
+  if(!confirm('確定要刪除成員「'+name+'」嗎？此操作將移除該成員的所有花朵記錄。')) return;
+  state.members = state.members.filter(m=>m!==name);
+  for(let g=0;g<4;g++) state.records[g] = state.records[g].filter(r=>r.member!==name);
+  document.getElementById('del_select').value='';
+  render(); scheduleSave();
+  showMsg('msg_del','✓ 已刪除成員：'+name);
+}
+
+// ============ RENDER ============
+function buildGradeTable(g){
+  const members = state.members;
+  const flowers = state.flowers[g];
+  const records = state.records[g];
+  if(!members.length && !flowers.length) return '<p style="font-size:12px;color:#bbb;padding:0.6rem">尚無資料</p>';
+  let html = '<table><thead><tr><th class="flower-col" style="min-width:90px">花朵 \\ 成員</th>';
+  const totCol={};
+  members.forEach(m=>{ html+='<th style="min-width:52px">'+m+'</th>'; totCol[m]=0; });
+  html+='<th class="total-col" style="min-width:44px">合計</th></tr></thead><tbody>';
+  let grand=0;
+  flowers.forEach(f=>{
+    let rowTotal=0;
+    html+='<tr><td class="flower-name">'+f+'</td>';
+    members.forEach(m=>{
+      const rec = records.find(r=>r.member===m && r.flower===f);
+      const c = rec ? rec.count : 0;
+      rowTotal+=c; totCol[m]+=c; grand+=c;
+      html += c>0 ? '<td class="has-flower">'+c+'</td>' : '<td>0</td>';
+    });
+    html+='<td class="total-col">'+rowTotal+'</td></tr>';
+  });
+  html+='<tr><td class="total-row" style="text-align:left;position:sticky;left:0">合計</td>';
+  members.forEach(m=>{ html+='<td class="total-row">'+totCol[m]+'</td>'; });
+  html+='<td class="grand">'+grand+'</td></tr></tbody></table>';
+  return html;
+}
+
+function buildTotalTable(){
+  const members = state.members;
+  if(!members.length) return '<p style="font-size:12px;color:#bbb;padding:0.6rem">尚無成員資料</p>';
+  let html='<table><thead><tr><th class="flower-col" style="min-width:90px">等級 \\ 成員</th>';
+  const totCol={};
+  members.forEach(m=>{ html+='<th style="min-width:52px">'+m+'</th>'; totCol[m]=0; });
+  html+='<th class="total-col" style="min-width:44px">合計</th></tr></thead><tbody>';
+  let grand=0;
+  for(let g=0;g<4;g++){
+    let rowTotal=0;
+    html+='<tr><td class="flower-name"><span class="badge '+BADGE[g]+'">'+GRADES[g]+'</span></td>';
+    members.forEach(m=>{
+      let s=0;
+      state.records[g].filter(r=>r.member===m).forEach(r=>s+=r.count);
+      rowTotal+=s; totCol[m]+=s; grand+=s;
+      html+='<td>'+(s>0?'<b>'+s+'</b>':0)+'</td>';
+    });
+    html+='<td class="total-col">'+rowTotal+'</td></tr>';
+  }
+  html+='<tr><td class="grand" style="text-align:left;position:sticky;left:0">總計</td>';
+  members.forEach(m=>{ html+='<td class="grand">'+totCol[m]+'</td>'; });
+  html+='<td class="grand">'+grand+'</td></tr></tbody></table>';
+  return html;
+}
+
+function render(){
+  if(!state) return;
+  const gt = document.getElementById('gradeTables');
+  let html='';
+  for(let g=0;g<4;g++){
+    html+='<div class="grade-block">';
+    html+='<div class="grade-header">';
+    html+='<button class="grade-toggle'+(openStates[g]?' open':'')+'" onclick="toggleGrade('+g+')">';
+    html+=(openStates[g]?'▲':'▼')+' <span class="badge '+BADGE[g]+'">'+GRADES[g]+'</span>';
+    html+=' '+GRADES[g]+' 等級表格';
+    const cnt = state.flowers[g].length;
+    html+=' <span style="font-size:11px;opacity:0.7">('+cnt+'種花朵)</span>';
+    html+='</button></div>';
+    html+='<div id="gw_'+g+'" class="table-wrap'+(openStates[g]?' open':'')+'">'+buildGradeTable(g)+'</div>';
+    html+='</div>';
+  }
+  gt.innerHTML=html;
+  document.getElementById('totalTable').innerHTML = buildTotalTable();
+  const sel = document.getElementById('del_select');
+  const cur = sel.value;
+  sel.innerHTML='<option value="">— 請選擇 —</option>';
+  state.members.forEach(m=>sel.innerHTML+='<option value="'+m+'"'+(m===cur?' selected':'')+'>'+m+'</option>');
+  document.getElementById('memberCount').textContent = state.members.length;
+  const chips = document.getElementById('memberChips');
+  chips.innerHTML = state.members.length
+    ? state.members.map(m=>'<div class="chip">'+m+'</div>').join('')
+    : '<span style="font-size:12px;color:#bbb">尚無成員</span>';
+  document.getElementById('memberList').innerHTML = state.members.map(m=>'<option value="'+m+'">').join('');
+  const allFlowers = [...new Set([...state.flowers[0],...state.flowers[1],...state.flowers[2],...state.flowers[3]])];
+  document.getElementById('flowerList').innerHTML = allFlowers.map(f=>'<option value="'+f+'">').join('');
+}
+
+function toggleGrade(g){
+  openStates[g]=!openStates[g];
+  render();
+}
+
+// ============ INIT ============
+GAS_URL = getStoredUrl();
+if(GAS_URL){
+  document.getElementById('setupOverlay').style.display = 'none';
+  loadData();
+  setInterval(loadData, 30000);
+} else {
+  document.getElementById('gasUrlInput').value = '';
+}
+</script>
+</body>
+</html>
